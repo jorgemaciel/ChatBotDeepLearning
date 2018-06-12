@@ -68,6 +68,82 @@ clean_answers = []
 for answer in answers:
     clean_answers.append(clean_text(answer))
 
+# Creating a dictionary that maps each word to its number of occurences
+word2count = {}
+for question in clean_questions:
+    for word in question.split():
+        if word not in word2count:
+            word2count[word] = 1
+        else:
+            word2count[word] += 1
+for answer in clean_answers:
+    for word in answer.split():
+        if word not in word2count:
+            word2count[word] = 1
+        else:
+            word2count[word] += 1
+
+# Creating two dictionaries that map the questions words and the answers words to a unique integer
+threshold = 20
+questionwords2int = {}
+word_number = 0
+for word, count in word2count.items():
+    if count >= threshold:
+        questionwords2int[word] = word_number
+        word_number += 1
+answersword2int = {}
+word_number = 0
+for word, count in word2count.items():
+    if count >= threshold:
+        answersword2int[word] = word_number
+        word_number += 1
+
+# Adding the last tokens to these two dictionaries
+tokens = ['<PAD>', '<EOS>', '<OUT>', '<SOS>']
+for token in tokens:
+    questionwords2int[token] = len(questionwords2int) + 1
+for token in tokens:
+    answersword2int[token] = len(answersword2int) + 1
+
+# Creating the inverse dictionary of the answerswords2int dictionary
+answersint2word = {w_i: w for w, w_i in answersword2int.items()}
+
+# Adding the End Of String token to the end of every answer
+for i in range(len(clean_answers)):
+    clean_answers[i] += ' <EOS>'
+
+# Translating all the questions and the answers into integers
+# and Replacing all the words that were filtered out by <OUT>
+questions_into_int = []
+for question in clean_questions:
+    ints = []
+    for word in question.split():
+        if word not in questionwords2int:
+            ints.append(questionwords2int['<OUT>'])
+        else:
+            ints.append(questionwords2int[word])
+    questions_into_int.append(ints)
+answers_into_int = []
+for answer in clean_answers:
+    ints = []
+    for word in answer.split():
+        if word not in answersword2int:
+            ints.append(answersword2int['<OUT>'])
+        else:
+            ints.append(answersword2int[word])
+    answers_into_int.append(ints)
+
+# Sorting questions and answers by the length of questions
+sorted_clean_questions = []
+sorted_clean_answers = []
+for length in range(1, 25 + 1):
+    for i in enumerate(questions_into_int):
+        if len(i[1]) == length:
+            sorted_clean_questions.append(questions_into_int[i[0]])
+            sorted_clean_answers.append(answers_into_int[i[0]])
+
+
+
 
 
 
