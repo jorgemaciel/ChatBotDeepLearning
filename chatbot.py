@@ -168,7 +168,7 @@ def encoder_rnn(rnn_inputs, rnn_size, num_layers, keep_prob, sequence_length):
     lstm = tf.contrib.rnn.BasicLSTMCell(rnn_size)
     lstm_dropout = tf.contrib.rnn.DropoutWrapper(lstm, input_keep_prob=keep_prob)
     encoder_cell = tf.contrib.rnn.MultiRNNCell([lstm_dropout] * num_layers)
-    encoder_output, encoder_state = tf.rnn.bidirecional_dynamic_rnn(
+    encoder_output, encoder_state = tf.nn.bidirectional_dynamic_rnn(
         cell_fw=encoder_cell,
         cell_bw=encoder_cell,
         sequence_length=sequence_length,
@@ -186,6 +186,7 @@ def decode_training_set(encoder_state, decoder_cell, decoder_embedded_input,
     attention_keys, attention_values, attention_score_function, attention_construct_function = tf.contrib.seq2seq.prepare_attention(
         attention_states, attention_option="bahdanau", num_units=decoder_cell.output_size
     )
+
     training_decoder_function = tf.contrib.seq2seq.attention_decoder_fn_train(encoder_state[0],
                                                                               attention_keys,
                                                                               attention_values,
@@ -338,9 +339,26 @@ training_predictions, test_predictions = seq2seq_model(tf.reverse(inputs, [-1]),
                                                        num_layers,
                                                        questionwords2int)
 
+# Setting up the Loss Error, the Optimizer and Gradient Clipping
+with tf.name_scope("optimization"):
+    loss_error = tf.contrib.seq2seq.sequence_loss(training_predictions, targets, tf.ones([input_shape[0], sequence_length]))
+    optimizer = tf.train.AdamOptimizer(learning_rate)
+    gradients = optimizer.compute_gradients(loss_error)
+    clipped_gradients = [(tf.clip_by_value(grad_tensor, -5., 5.), grad_variable) for grad_tensor, grad_variable in gradients if grad_tensor is not None]
+    optimizer_gradient_clipping = optimizer.apply_gradients(clipped_gradients)
+
+# Padding the sequences with the <PAD> token
 
 
+def apply_padding(batch_of_sequences, word2int):
+    max_sequence_length = max([len(sequence) for sequence in batch_of_sequences])
 
+    return [sequence + [word2int['<PAD>']] * (max_sequence_length - len(sequence)) for sequence in batch_of_sequences]
+
+
+# # Splitting the data into batches of questions nas answers
+# def split_into_batches(questions, answers, batch_size):
+#     for batch_index in range(0, len(questions)start_index = batch_index * batch_size):
 
 
 
